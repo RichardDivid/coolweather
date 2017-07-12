@@ -12,7 +12,7 @@ import java.io.IOException;
  *
  * 磁盘缓存
  */
-public class DiskCache {
+public class DiskCache implements ImageCache{
 
     static String cacheDir = "sdcard/cache/";
 

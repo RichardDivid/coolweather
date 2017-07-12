@@ -2,7 +2,6 @@ package com.booyue.demo.http;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.util.LruCache;
 import android.widget.ImageView;
 
 import java.io.InputStream;
@@ -18,16 +17,18 @@ import java.util.concurrent.Executors;
  */
 public class ImageLoader {
 
-    ImageCache mImageCache = new ImageCache();
+//    MemoryCache mMemoryCache = new MemoryCache();
+//
+//    DiskCache mDiskCache = new DiskCache();
 
-    DiskCache mDiskCache = new DiskCache();
+    ImageCache mImageCache = new MemoryCache();
 
     ExecutorService mExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private Bitmap bitmap;
     private boolean isUseDiskCache;
 
-    public ImageLoader() {
-
+    public void setImageCache(ImageCache imageCache) {
+        mImageCache = imageCache;
     }
 
 
@@ -39,12 +40,18 @@ public class ImageLoader {
      */
     public void displayImage(final String url, final ImageView imageView) {
         ///如果有缓存，就从缓存中取出
-        bitmap = isUseDiskCache ? mDiskCache.get(url) : mImageCache.get(url);
+        bitmap = mImageCache.get(url);
         if (bitmap != null) {
             imageView.setImageBitmap(bitmap);
             return;
         }
         //没有缓存需要从网络获取,提交给线程池下载
+
+        submitLoadRequest(url, imageView);
+
+    }
+
+    private void submitLoadRequest(final String url, final ImageView imageView) {
         imageView.setTag(url);
         mExecutorService.submit(new Runnable() {
             @Override
@@ -54,11 +61,7 @@ public class ImageLoader {
                 if (imageView.getTag().equals(url)) {
                     imageView.setImageBitmap(bitmap);
                 }
-                if (isUseDiskCache) {
-                    mDiskCache.put(url, bitmap);
-                } else {
-                    mImageCache.put(url, bitmap);
-                }
+                mImageCache.put(url, bitmap);
 
             }
         });
