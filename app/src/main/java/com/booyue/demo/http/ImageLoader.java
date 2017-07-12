@@ -13,29 +13,23 @@ import java.util.concurrent.Executors;
 
 /**
  * Created by 15272 on 2017/7/11.
- *
+ * <p>
  * 图片的加载
  */
 public class ImageLoader {
 
-    ImageCache mImageCache;
+    ImageCache mImageCache = new ImageCache();
+
+    DiskCache mDiskCache = new DiskCache();
 
     ExecutorService mExecutorService = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
     private Bitmap bitmap;
+    private boolean isUseDiskCache;
 
     public ImageLoader() {
 
-        initImageCache();
     }
 
-    /**
-     * 初始化Imageview
-     */
-    private void initImageCache() {
-
-       mImageCache = new ImageCache();
-
-    }
 
     /**
      * 展示图片
@@ -45,12 +39,12 @@ public class ImageLoader {
      */
     public void displayImage(final String url, final ImageView imageView) {
         ///如果有缓存，就从缓存中取出
-        bitmap = mImageCache.get(url);
-        if(bitmap != null){
+        bitmap = isUseDiskCache ? mDiskCache.get(url) : mImageCache.get(url);
+        if (bitmap != null) {
             imageView.setImageBitmap(bitmap);
             return;
         }
-        //没有缓存需要从网络获取
+        //没有缓存需要从网络获取,提交给线程池下载
         imageView.setTag(url);
         mExecutorService.submit(new Runnable() {
             @Override
@@ -60,8 +54,12 @@ public class ImageLoader {
                 if (imageView.getTag().equals(url)) {
                     imageView.setImageBitmap(bitmap);
                 }
+                if (isUseDiskCache) {
+                    mDiskCache.put(url, bitmap);
+                } else {
+                    mImageCache.put(url, bitmap);
+                }
 
-                mImageCache.put(url, bitmap);
             }
         });
 
@@ -95,6 +93,16 @@ public class ImageLoader {
             e.printStackTrace();
         }
         return null;
+    }
+
+    /**
+     * 设置是否使用磁盘缓存
+     *
+     * @param useDiskCache
+     */
+    public void useDiskCache(boolean useDiskCache) {
+        isUseDiskCache = useDiskCache;
+
     }
 
 }
